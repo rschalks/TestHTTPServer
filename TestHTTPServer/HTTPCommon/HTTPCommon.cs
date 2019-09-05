@@ -22,10 +22,19 @@
         Patch = 5,
         Post = 6,
         Put = 7,
-        Trace = 8
+        Trace = 8,
     }
 
-    public enum HTTPResponseCode
+    public enum HTTPStatusCodeCategory
+    {
+        Informational = 1,
+        Succesful = 2,
+        Redirection = 3,
+        ClientError = 4,
+        ServerError = 5,
+    }
+
+    public enum HTTPStatusCode
     {
         Continue = 100,
         SwitchingProtocols = 101,
@@ -76,6 +85,14 @@
         ServiceUnavailable = 503,
         GatewayTimeout = 504,
         HTTPVersionNotSupported = 505,
-        NetworkAuthenticationRequired = 511
+        NetworkAuthenticationRequired = 511,
+    }
+
+    public enum HTTPVersion
+    {
+        None = 0,
+        Unsupported = 1,
+        HTTP10 = 2,
+        HTTP11 = 3
     }
 }
