@@ -4,12 +4,13 @@
     {
         KeepAlive = 0,
         TransferEncoding = 1,
-        TEConnection = 2,
+        TE = 2,
         Trailer = 3,
         Upgrade = 4,
         ProxyAuthorisation = 5,
         ProxyAuthenticate = 6,
         Close = 7,
+        Connection = 8,
     }
 
     public enum HTTPRequestMethod
