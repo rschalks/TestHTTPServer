@@ -74,7 +74,6 @@ namespace LWHTTP.Utils
             bool valid = false;
             while (!valid)
             {
-                Int32 input = 0;
                 Console.WriteLine("Insert a number between {0} and {1}.", min.ToString(), max.ToString());
 
                 Console.Write(">");

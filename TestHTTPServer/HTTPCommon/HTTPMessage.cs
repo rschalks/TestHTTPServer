@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using LWHTTP.HTTPCommon.HTTPHeaders;
 using System.Text;
+using System.Linq;
 
 namespace LWHTTP.HTTPCommon
 {
@@ -27,11 +28,16 @@ namespace LWHTTP.HTTPCommon
         /// The HTTP version of this message.
         /// </summary>
         public HTTPVersion Version { get; set; }
+        public string Path { get; set; }
+
+        public IEnumerable<byte> Content { get; set; }
+
+        private byte[] _buffer;
 
         public HTTPMessage()
         {
             this.Headers = new List<HTTPHeader>();
-            this.Version = HTTPVersion.None;
+            this.Version = HTTPVersion.HTTP11;
         }
 
         public static HTTPMessage Parse(string data)
@@ -43,7 +49,6 @@ namespace LWHTTP.HTTPCommon
 
             string requestMethodStr = data.Substring(0, data.IndexOf('/')-1);
             string[] requestMethods = Enum.GetNames(typeof(HTTPRequestMethod));
-            HTTPRequestMethod method = HTTPRequestMethod.Connect;
             for (int i = 0; i < requestMethods.Length; i++)
             {
                 requestMethods[i] = requestMethods[i].ToUpper();
@@ -56,10 +61,10 @@ namespace LWHTTP.HTTPCommon
             }
 
             spaceIndex = data.IndexOf(' ', spaceIndex + 1);
-            string path = data.Substring(slashIndex, spaceIndex - slashIndex);
-            Console.WriteLine("Path: {0}", path);
+            ret.Path = data.Substring(slashIndex, spaceIndex - slashIndex);
+            Console.WriteLine("Path: {0}", ret.Path);
 
-            string httpVersionStr = data.Substring(spaceIndex + path.Length, 8);
+            string httpVersionStr = data.Substring(spaceIndex + ret.Path.Length, 8);
             Console.WriteLine("HTTP Version: {0}", httpVersionStr);
 
             string[] httpVersionStrs = Enum.GetNames(typeof(HTTPVersion));
@@ -85,7 +90,7 @@ namespace LWHTTP.HTTPCommon
                 string line = lines[lineIndex].Replace("\r","");
                 if (line == "")
                 {
-                    loopingHeaders = false;
+                    loopingHeaders = false;                                 
                     break;
                 }
                 HTTPHeader header = HTTPHeader.Parse(line);
@@ -93,6 +98,61 @@ namespace LWHTTP.HTTPCommon
                 lineIndex += 1;
             }
             return ret;
+        }
+
+        public string HeadersToHTTPString()
+        {
+            StringBuilder sb = new StringBuilder();
+            if (!IsResponse)
+            {
+                sb.Append(string.Format("{0} {1} {2}\r\n", 
+                    this.RequestMethod.ToString().ToUpper(),
+                    this.Path,
+                    HTTPHelpers.HTTPVersionToString(this.Version)));
+            }
+            else
+            {
+                sb.Append(string.Format("{0} {1} {2}\r\n",
+                    HTTPHelpers.HTTPVersionToString(this.Version),
+                    ((int)this.StatusCode).ToString(),
+                    HTTPHelpers.HTTPStatusCodeToString(this.StatusCode)));
+            }
+
+            foreach(HTTPHeader head in this.Headers)
+            {
+                sb.Append(String.Format("{0}\r\n", head.ToString()));
+            }
+
+            return sb.ToString();
+        }
+
+        public byte[] ToByteArray()
+        {
+            List<byte> bytes = new List<byte>();
+
+            string headersString = HeadersToHTTPString();
+
+            byte[] headerBytes = Encoding.ASCII.GetBytes(headersString);
+            bytes.AddRange(headerBytes);
+
+            //HTTPContentLengthHeader lenHeader = (HTTPContentLengthHeader)this.Headers.FirstOrDefault(h => h.GetType() == typeof(HTTPContentLengthHeader));
+
+            bytes.AddRange(new byte[] {
+                (byte)'\r',
+                (byte)'\n'
+                });
+
+            /*if (lenHeader != null || ((int)lenHeader.Content) > 0)
+            {
+                bytes.AddRange(Content);
+            }*/
+
+            if (Content != null)
+            {
+                bytes.AddRange(Content);
+            }
+
+            return bytes.ToArray();
         }
     }
 }

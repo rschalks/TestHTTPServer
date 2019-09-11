@@ -82,33 +82,6 @@ namespace LWHTTP.HTTPCommon.HTTPHeaders
             this.Title = "Connection";
         }
 
-        public static string ConnectionTypeToString(HTTPConnection conn)
-        {
-            switch(conn)
-            {
-                case HTTPConnection.Close:
-                    return "close";
-                case HTTPConnection.KeepAlive:
-                    return "keep-alive";
-                case HTTPConnection.ProxyAuthenticate:
-                    return "proxy-authenticate";
-                case HTTPConnection.ProxyAuthorisation:
-                    return "proxy-authorisation";
-                case HTTPConnection.TE:
-                    return "te";
-                case HTTPConnection.Connection:
-                    return "connection";
-                case HTTPConnection.Trailer:
-                    return "trailer";
-                case HTTPConnection.TransferEncoding:
-                    return "transfer-encoding";
-                case HTTPConnection.Upgrade:
-                    return "upgrade";
-                default:
-                    return "";
-            }
-        }
-
         public override void ParseContent(string str)
         {
             str = str.Replace("-", "").ToLower();
@@ -122,6 +95,11 @@ namespace LWHTTP.HTTPCommon.HTTPHeaders
                 }
             }
         }
+
+        public override string ToString()
+        {
+            return string.Format("{0}: {1}", this.Title, HTTPHelpers.ConnectionTypeToString((HTTPConnection)this.Content));
+        }
     }
 
     public class HTTPHostHeader : HTTPHeader
@@ -130,21 +108,96 @@ namespace LWHTTP.HTTPCommon.HTTPHeaders
 
         public HTTPHostHeader()
         {
-            this.ContentType = typeof(IPAddress);
+            this.ContentType = typeof(string);
             this.Title = "Host";
             this.Port = -1;
         }
 
         public override void ParseContent(string str)
         {
-            string ipStr = str;
+            string hostStr = str;
             if (str.Contains(":"))
             {
                 int colonIndex = str.IndexOf(':');
                 string portStr = str.Substring(colonIndex + 1);
                 Port = int.Parse(portStr);
             }
-            this.Content = IPAddress.Parse(ipStr);
+            this.Content = hostStr;
+        }
+    }
+
+    public class HTTPAcceptHeader : HTTPHeader
+    {
+        public HTTPAcceptHeader()
+        {
+            this.ContentType = typeof(List<HTTPMIMEType>);
+            this.Content = new List<HTTPMIMEType>();
+            this.Title = "Accept";
+        }
+
+        public override void ParseContent(string str)
+        {
+            int nrOfCommas = str.Count(c => c == ',');
+            int lastCommaIndex = 0;
+            int commaIndex = 0;
+            for (int i = 0; i < nrOfCommas+1; i++)
+            {
+                commaIndex = str.IndexOf(',', lastCommaIndex);
+                int length = 0;
+                if (commaIndex != -1)
+                {
+                    length = commaIndex - lastCommaIndex;
+                }
+                else
+                {
+                    length = str.Length - lastCommaIndex;
+                }
+                string substr = str.Substring(lastCommaIndex, length);
+                HTTPMIMEType mimeType = HTTPMIMEType.Parse(substr);
+                ((List<HTTPMIMEType>)this.Content).Add(mimeType);
+                lastCommaIndex = commaIndex + 1;
+            }
+        }
+
+        public override string ToString()
+        {
+            StringBuilder sb = new StringBuilder();
+            var list = ((List<HTTPMIMEType>)this.Content);
+            sb.Append("Accept: ");
+            for (int i = 0; i < list.Count; i++)
+            {
+                HTTPMIMEType typ = list[i];
+                sb.Append(string.Format("{0}{1}", i == 0 ? "" : ",", typ.ToString()));
+            }
+            return sb.ToString();
+        }
+    }
+
+    public class HTTPContentTypeHeader : HTTPHeader
+    {
+        public HTTPContentTypeHeader()
+        {
+            this.Title = "Content-Type";
+            this.ContentType = typeof(HTTPMIMEType);
+        }
+
+        public override void ParseContent(string str)
+        {
+            this.Content = HTTPMIMEType.Parse(str);
+        }
+    }
+
+    public class HTTPContentLengthHeader : HTTPHeader
+    {
+        public HTTPContentLengthHeader()
+        {
+            this.Title = "Content-Length";
+            this.ContentType = typeof(int);
+        }
+
+        public override void ParseContent(string str)
+        {
+            this.Content = (object)int.Parse(str);
         }
     }
 }
